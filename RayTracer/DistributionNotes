@@ -1,0 +1,23 @@
+#pragma once
+/*
+notes on some distributions for sampling:
+
+. one is the dirac function where you can change the size of the spike, its like a choosing distribution. Really its the normal distribution
+you can pick where the mean is then how fast it falls off, if it falls off fast then its like a dirac and you almost pick out one direction, might be good
+for specular mirror reflection or if you make it wider then it will priotize the ones around middle. Useful to have
+
+. another is the exponential possion looking ones that priortize one "side" of the domain and it falls of exponentially or close to
+
+. uniform of course, default one
+
+. sigmoid distribution
+
+. kumaraswamy a=.5, b=.5 looks cool it prioritozies both the edges sharply then it turns into a uniform in the middle
+
+. u-quadratic distribution, is a quadratic, creates more on the boundaries and almost linearlly falls off until 0 is at the middle
+
+. planck distribution, could be useful for energy equations or conversions
+
+. chauchy distribution, a normal looking distribution with more at the endpoints and not as big of a middle
+
+*/

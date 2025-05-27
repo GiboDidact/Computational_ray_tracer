@@ -1,0 +1,111 @@
+#pragma once
+/*
+* convert to luminance(V), LMS, rgb, rgb(bar), XYZ, any other color space
+1.) what are color spaces and how does it work with the camera to the final image
+color spaces are 3d vector spaces that represent the tristimulus theory, pretty much each scalar is mapped to some output spectral distribution, ultimately
+its all based off having 3 lights with 3 scalar knobs and its just tuned to say given a spectral distribution how do I need to turn each of the 3 knobs
+
+2.) how to we convert from spectral to rgb, to render on display
+usually you go to XYZ which is the standard, then transform to whatever rgb color space you need (sRGB) is usually the standard
+
+3.) specifically, can we use information on monitors to change the color space (gamma, hdr, rgb color space of monitor)
+*my monitor uses rgb-standard dynamic range color space. Though it really uses sRGB standard (IEC61966-2.1)
+each display could have its 4 chromaticity values and from there you contruct matrix transform to XYZ and the inverse, or you can probably
+look up the transform matrix. Thats really it each display has a corresponding color space matrix
+
+4.) how to we convert from rgb to spectral, for data
+its a little harder, they have thier implemented algorithms for it
+
+
+overview: if you have a display with 3 outputs (rgb) all you do is measure its spectral distribution, then the question is given a spectral incoming
+distribution how do I tune 3 outputs? you just do the integral im pretty sure and thats the easy conversion from spectral-->rgb to your specific output.
+However most of the time you want to add it to the standard, so to do that you would get the xyY space for your r,g,b,white(w), then theres a formula to create
+the transform and inverse trasnform from your rgb-->XYZ and XYZ-->your rgb. Thats basically how it works.
+You have LMS sensitivity, photometry V curve, standard rgb(bar) space, XYZ curves, sRGB
+
+given response curve you can integrate to get 1 value, or you can multiply it with spectral distribution to get a new weighted spectral distribution
+
+camera sensors dont pick up a spectral distribution data, it just picks up 3 scalar RGB color space, though that space can be different than the output color
+space of the camera
+
+uses: camera sensors could have sensitivty response curves so to physically simulate it given the spectral distribution you multiply and scale the incoming
+amount by that or maybe even correct it like if you know it picks up half the red double the red (cameras pickup rgb color spaces in the sensor I guess),
+also to make the brightness perctually real you use the photometry response curves to adjust brightness based off spectral distribution,
+the main use is to get the right color space triple scalars for your monitor display ultimately theres so many outputs and gamma correction so being able
+to adjust your pixel scalars to map correctly
+
+
+tristimulus theory 3 scalars can represent perceptually any spectral distribution. you have 3 spectral matching functions and the 
+3 corresponding values are just integrating it. That means a + b is just scalar1 + scalar2 or c*a = c*scalar_1. 
+*however a*b is not scalar1*scalar2 this is why rgb is wrong
+spectral rendering is nicer than rgb because of this, multplying in any rgb can give wrong values, spectral avoids this
+
+XYZ space: V() = 683Y() 
+
+Cone responses L,M,S: 3 response curves for sensitivity of eye cones to 3 colors r,g,b. They again are scalars per wavelength that end up giving you
+a brightness value for each. just tells you how much of a electrical nerve impulse each cone receives
+Theres a conversion from XYZ to LMS cone signal, I guess you can do it if you want information on how much sensitivity each cone picks up
+
+color matching functions r,g,b (bar): these again are response curves that give you brightness for r,g,b. 
+3 monochromatic lights: 435.8, 546.1, 700 can create any spectral
+so for this theory its saying you have output lights monochromatic with the 3 wavelengths, theres a knob to tune each one scalar value. If we recieve a
+spectral distribution how much of each knob do I tune it to match that spectral distributions perceptual color? Well the integrate the spectral distribution
+with the 3 response curves and those give you the r,g,b values to tune the knob.
+now we can map spectral distributions to a ---> 3 vector color space, and if everyone uses the same 3 monochromatic lights everything matches
+
+I think xyz is like the theoretical standardized space for all 3 color spaces, because every output device might have different spectral output values so 
+they won't all be the exact rgb, maybe it doesnt have any blue. So it makes sense every deive might have its own color space, but the XYZ is the standard that
+they can all create a conversion from so everyone can convert to eachother. The xyz curves look like rgb ones and its also related to photometry. Its used
+mainly for conversion between other color spaces. device-independant color space.
+put simply, you have a XYZ color standard which is the maximal 3d color space and device independant, then every single output device will be able to display
+in some subspace of XYZ and will have their own 3 scalar values and hence own color space. Then the XYZ is a standard everyone can convert too
+
+monitors cant display all of xyz space, becaues its a theoretical standard. Therefore to actually have practical output devices that can display we
+have different color spaces that can save space and work on a subset of the XYZ color space. If you make an output device you can come up with your own
+"rgb" response curves depending on your output spectral distributions, then integrating would give you the right 3 colors.
+
+XYZ device independant, RGB can be device dependant
+
+For example if you know the R,G,B spectral distribution output functions of a monitor then theres a specific color space associated with it that,
+and to calculate the 3 scalars its just the integral r= integral(R(wavelength)*S(wavelength))
+
+application: so one application to all of this is whenever you have values of some color space you can always convert it to XYZ which is device independant, then
+depending on your output device you can specifically convert it to that, that way you can have an option for different monitors
+
+
+
+photometry is useful for perceptual brightness
+photometry: every radioemtric quantity has a corresponding photometric one, and its pretty straightforward theres just a sensitivty function to map it
+the spectral response curve V(wavelength) is a function that represents the human eyes sensitivity to different wavelengths (like a camera). So its just a scaling
+factor per wavelength thats it. So green light appears brighter than red even if its the same power. And to calculuate photometric quantities its just an integral
+photopic curve (everyday light levels), V:wavelength-->(0,1) percentage of sensitivity
+*also theres a low light level scotopic curve:wavelenth-->(0,1) is shifted more toward lower wavelengths
+
+luminance Y, Y= integral(L(wavelength)*V(wavelength))
+*remember it transforms the spectral distribution into 1 number..which relates to brightness so it loses "color" information but thats why we use it 
+for brightness, and later you can map each brightness to r,g,b brightness
+
+*how is this used? well its about brightness, if you want to perceptually make your image look correct scaling this will help in terms of brightness, now
+green light will be more bright than red in your image, which is how we see it in real life
+
+wavelength sensitivity functions: these are simply scaling factors of the wavelength which map it to 1 brightness value, 
+camera sensors have them, the eye has them in photometry
+
+
+For a display: imagine it has 3 color displays, you shine each one seperately and measure its spectral distribution, then you get the white one as well. Then
+you can convert these to chromatic xyY space. So you have xyY for r,g,b,and white point w. From this information you can always construct a XYZ transform
+
+chromaticity: xyY color space. lightness is brightness relative to white, chroma is colorfulness relative to white
+xyY is a color space defined by the XYZ just an average really, *really what this space does is seperate a colors chromaticity from its lightness
+so you would take your XYZ-->(x,y) where z=1-x-y, and the new (x,y,z) triple gives you color information regardless of brightness
+rgbcolorspace class takes in the rgb (x,y) pairs and the whitepoint spectral distribution, converts it to XYZ, then into xyY to get its chromaticity
+
+color encoding: srgb, gamma, linear
+srgb is a nonlinear encoding
+
+images can be encoded in color spaces, cameras can pickup sensors in color spaces, output display in color spaces
+
+
+
+
+*/

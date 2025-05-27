@@ -1,0 +1,51 @@
+
+/*
+instead of rgb, the physical color representation is in a spectral distribution. Its just some distribution over the visible wavelengths
+
+values should all be normalized between 0 and 1 so everything has the same overall scale
+
+remember with spectral rendering we have a whole new variable, degree of freedom in every calculation. This can also help creating wavelength specific
+events like diffraction. To get the radiance, you just integrate the radiance of every wavelength
+
+1.) how do we store this in different ways? lights will need it, rays will need it, textures will need it
+. constantspectrum-just has 1 value and thats it
+. denselysampledpspectrum- has [min,max] and has 1nm spaced values. to get a specific lambda, index = (lambda-min), lambda >= min && lambda <= max
+. piecewiselienar- you give a set of (wavelength,intensity) values and it will linearly interpolate, and you can specify more in certain high frequency areas
+. blackbody-equation inputs(wavelength, temperature)-->spectral radiance (kW*sr^-1*m^-2*nm^-1). every tempetature gives the spectral distribution and the
+wavelength gives the radiance at that wavelength. The units here are spectral radiance output, is that what we want??
+units are in m, nm->m 1e^-9
+normalize it by dividing by the max value, the max wavelength for temperature is weins law: lamba_max = b / T. b is weins constant
+T is in Kelvin
+. standard illuminant charts- these are measured light emission spectral distributions that are useful. A-F illuminants, more standards
+you have the data points of these and put them in a piecewiselinear spectrum, and then create a densely from that piecewise
+*might have to convert units as well from the data
+spectra::d() gives a d illuminant at the given temperuatre as a denselypackedspectrum
+
+**the output values stored should be between (0,1), because the code makes no distinguishing between if its radiance or normalized, plus
+this part of the code shouldn't know a radiance value, it should just be a percentage then the code outside would scale it based off the known radiance
+
+2.) how do we do math operations on different spectras? we might need to add them together or multiply or "mix" them together in some way
+. so actually we could create all these math methods to combine the distributions per type and everything but thats unneccsarray and would be
+a little complicated. Luckily we don't need to do that because ultimately every spectral distribution will be evaluated in an integral where we use
+monte carlos, meaning we only need to take samples from the distribution then do math on it.
+. so we aren't going to do a general spectrum distribution operation code, we will take N samples of the wavelength and then do operation on that
+so we just need a class that has N component vectors and does the N component vector operations
+
+3.) so were picking wavelength samples and doing monte carlos how do we pick them, and get pdf, how many samples do we take?
+. because were doing monte carlos we need the pdf value, thats why theres another sampledwavelength class which will hold the wavelengths along with pdfs
+. the way we sample the wavelengths are the stratification method, you could do completely random, and theres another visiblewavelength function pbr4 gives
+really you could do anything but stratification works well and you just make sure you store the pdfs
+. how many samples?: well 1 or 2 are bad and lead to color artifacts where you have colored noise, its shown that 32 with straitified wavelength sampling
+is the most efficient before it falls off. Though too many samples leads to more computation show its a tradeoff, though in reality usually you don't
+want too much because they start to make less of a difference and other monte carlo optimizations are better
+
+*make sure you dont mix up sampledspectrums with different wavelengths
+
+4.) how do we convert spectra to rgb/xyz, other formats? 
+. spectra::x/y/z give the color matching curves. CEI_X, CEI_Y, CEI_Z intensity values, with CIE_lambda wavelength values
+
+5.) How do we convert it to the cameras sensitivity function?
+*/
+
+
+
